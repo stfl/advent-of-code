@@ -8,9 +8,12 @@
 
 (setq-local input (-map #'string-to-number (read-lines "input.txt")))
 
+;; (defun count-increased (list)
+;;   (-count (lambda (a) (< (car a) (car (cdr a))))
+;;            (-partition-in-steps 2 1 list)))
+
 (defun count-increased (list)
-  (-count (lambda (a) (< (car a) (car (cdr a))))
-           (-partition-in-steps 2 1 list)))
+  (-count (-applify '<) (-partition-in-steps 2 1 list)))
 
 (count-increased input)
 
