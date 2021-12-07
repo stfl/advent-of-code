@@ -16,31 +16,53 @@
                   (-filter (-not 'string-empty-p)
                            (cdr input))))
 
-(setq-local found nil)
+(defun board-complete? (board)
+  (-first (-partial #'-all? 'null)
+          (append board (-unzip board))))
 
 (defun mark-until-found (in-list boards)
   (let* ((marked boards)
          (f (catch 'found
-                (dolist (in in-list)
-                  (setq marked (-map (-partial '-remove-item in) marked))
-                  (let ((complete-index (-find-indices 'not marked)))
-                    (when complete-index
-                      (throw 'found `(,(car complete-index) . ,in))))))))
-    `(,f ,marked)))
+              (dolist (in in-list)
+                (setq marked (-map (-partial '-replace in 'nil) marked))
+                (let ((completed-board (-first 'board-complete? (-partition 5 marked))))
+                  (when completed-board
+                    (throw 'found `(,in . ,completed-board))))))))
+    f))
 
 (defun score (in-list boards)
-            (let* ((res (mark-until-found in-list boards))
-                   (board-start (* (/ (car (car res)) 5) 5))
-                   (board (-slice (nth 1 res) board-start (+ board-start 5)))
-                   (last-in (string-to-number (cdr (car res)))))
-              (* last-in (-sum
-                          (-map 'string-to-number (-flatten board))))))
+  (-let (((last-in . board) (mark-until-found in-list boards)))
+    (* (string-to-number last-in)
+       (-sum (-map 'string-to-number (-flatten board))))))
 
 (message "Part1: %s" (score in-list boards))
 
+;; Part 2
 
-;; (setq-local complete-board
-;;             (floor (/
-;;                     ()
-;;             (car ))
-;;             4))
+;; without catch throw
+
+(defun mark-boards (boards in)
+  (-map (-partial '-replace in 'nil) boards))
+
+(defun play-bingo (boards in-list)
+  (when (and in-list boards)
+    (let* ((marked (mark-boards boards (car in-list)))
+           (completed-board (-first 'board-complete? (-partition 5 marked)))
+           (remaining (if completed-board
+                          (-flatten-n 1 (-remove 'board-complete? (-partition 5 marked)))
+                        marked)))
+      (cons completed-board
+            (play-bingo remaining (cdr in-list))))))
+
+(defun bingo-score (in board)
+  (when board
+    (* (string-to-number in)
+       (-sum (-map 'string-to-number (-flatten board))))))
+
+(defun bingo-scores (boards in-list)
+  (-map (-applify #'bingo-score)
+        (-zip-lists in-list
+                    (play-bingo boards in-list))))
+
+;; (message "Part1: %d" (-first (-not 'null) (bingo-scores boards in-list)))
+(message "Part2: %d" (-last (-not 'null) (bingo-scores boards in-list)))
