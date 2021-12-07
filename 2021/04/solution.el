@@ -1,3 +1,5 @@
+;; -*- max-lisp-eval-depth: 2000; -*-
+
 (defun read-lines (filePath)
   "Return a list of lines of a file at filePath."
   (with-temp-buffer
@@ -41,16 +43,15 @@
 
 ;; without catch throw
 
+(setq boards (-partition 5 boards))
+
 (defun mark-boards (boards in)
-  (-map (-partial '-replace in 'nil) boards))
+  (-tree-map (lambda (el) (unless (string= el in) el)) boards))
 
 (defun play-bingo (boards in-list)
   (when (and in-list boards)
-    (let* ((marked (mark-boards boards (car in-list)))
-           (completed-board (-first 'board-complete? (-partition 5 marked)))
-           (remaining (if completed-board
-                          (-flatten-n 1 (-remove 'board-complete? (-partition 5 marked)))
-                        marked)))
+    (-let (((completed-board remaining)
+            (-separate 'board-complete? (mark-boards boards (car in-list)))))
       (cons completed-board
             (play-bingo remaining (cdr in-list))))))
 
